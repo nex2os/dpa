@@ -265,7 +265,8 @@ def iterateModels(training_set,validation_set, config):
                             "AttackedByte" : config["AttackedByte"],
                             "ClassNumber"  : 2, # For binary mapping (LSB/MSB)
                             "Step"         : config["Step"],
-                            "Iteration"    : iteration
+                            "Iteration"    : iteration,
+                            "Traces"       : config["Traces"]
                             }
                     DPA(training_set["x"],training_set["y"],validation_set["x"],validation_set["y"],validation_set["key"],config)
 
@@ -288,12 +289,12 @@ def DPA(traces, plain, traces_test, plain_test, key_test, config):
     # prepare graph and model.
     fig,art=formGraph()
     model= formModelTimon(traces[0,:].size, numClasses=config["ClassNumber"], nodeNr=config["NodesNumber"], layerNr=config["LayersNumber"])
-    model.save_weights(str(config["learningRate"])+'_iterated_model_weights.h5')
+    model.save_weights(str(config["Iteration"])+'_iterated_model_weights.h5')
     
     
     for key in range (key_test[0,config["AttackedByte"]]-2,key_test[0,config["AttackedByte"]]+2):
           # For each key use the same initial weights to make the results more stable
-          model.load_weights(str(config["learningRate"])+'_iterated_model_weights.h5')
+          model.load_weights(str(config["Iteration"])+'_iterated_model_weights.h5')
           
           labels= create_labels(plain, key, keybytePos=config["AttackedByte"])
           
@@ -302,7 +303,7 @@ def DPA(traces, plain, traces_test, plain_test, key_test, config):
           plotStep(art,history,key,key_test[0,config["AttackedByte"]])
           print(key)
 
-    fig.savefig("ASCAD_TIMON_MLP_RES/ASCAD_TIMON_MLP_20_10_30000_"+str(config["Iteration"])+".png",dpi=1200)
+    fig.savefig("ASCAD_TIMON_MLP_RES/ASCAD_TIMON_MLP_20_10_"+str(config["Traces"])+"_"+str(config["Iteration"])+".png",dpi=1200)
     return fig
 
 
@@ -319,6 +320,7 @@ if __name__ == "__main__":
     "Step"             : 100,
     "InitialWindowSize": 700,
     "AttackedByte"     : 2,
+    "Traces"             : 1000,
     }
 
     training_set = {}
@@ -329,9 +331,9 @@ if __name__ == "__main__":
     (training_set["x"], training_set["y"], training_set["key"]), (attack_set["x"], attack_set["y"], attack_set["key"]) = load_ascad(config["Path To Database"], DPA_format = (config["Attack Type"]=="DPA"))
 
     # Extract the required number of traces
-    profiling_set["x"] = training_set["x"][:30000,]
-    profiling_set["y"] = training_set["y"][:30000,]
-    profiling_set["key"] = training_set["key"][:30000,]
+    profiling_set["x"] = training_set["x"][:config["Traces"],]
+    profiling_set["y"] = training_set["y"][:config["Traces"],]
+    profiling_set["key"] = training_set["key"][:config["Traces"],]
     
     # Execute the attack.
     with tf.device('/CPU:0'):
